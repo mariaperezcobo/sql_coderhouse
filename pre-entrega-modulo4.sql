@@ -1,53 +1,11 @@
 select * from clientes;
 select * from productos;
 select * from ventas;
+select * from categorias;
 ;
 
-insert INTO productos (nombre_producto, costo_productos, id_productos, categoria)
-values ('Play',1500000, 6, 'TV Y ACCESORIOS DE TV');
 
-insert INTO clientes (id_clientes, email, edad)
-values (6,'jose@gmail.com', 36);
-    
 
-UPDATE ventas
-SET fecha_venta = '2026-06-02'
-WHERE id_ventas = 12;
-
-UPDATE ventas
-SET fecha_venta = '2026-04-04'
-WHERE id_ventas = 13;
-UPDATE ventas
-SET fecha_venta = '2026-03-10'
-WHERE id_ventas = 14;
-
-UPDATE ventas
-SET fecha_venta = '2026-02-15'
-WHERE id_ventas = 15;
-
-UPDATE ventas
-SET fecha_venta = '2026-03-20'
-WHERE id_ventas = 11;
-
-UPDATE productos
-SET nombre_producto = 'MOUSE',
-    costo_productos = 15000
-WHERE id_productos = 5;
-
-update productos 
-set categoria ='TV Y ACCESORIOS DE TV'
-where id_productos =4;
-
-INSERT INTO ventas (id_producto, id_cliente)
-VALUES
-(6, 2),
-(4, 5),
-(4, 1),
-(6, 3),
-(1, 4);
-
-alter table ventas 
-add column fecha_venta date;
 
 --para unir ventas y productos
 select *
@@ -58,46 +16,84 @@ on v.id_producto = p.id_productos;
 
 --rentabilidad por categoria (para sumar ventas por categorias y listar las ventas totales de cada categoria)
 select 
-p.categoria,
-sum (p.costo_productos) as ventas_totales
-from ventas v
+c.nombre_categoria,
+count (v.id_producto) as unidades_vendidas, --para contar cant de unidades vendidas
+sum (v.precio_venta) as ingreso_total, --para ver ingreso total
+sum (v.precio_venta - p.costo_productos) as rentabilidad --calcula precio de venta menos costo del producto
+from ventas v --de la tabla ventas que esta unida a productos por di_producto que esta unida a categorias por id_categorias
 join productos p
 on v.id_producto = p.id_productos
-group by p.categoria;
+join categorias c 
+on p.categoria = c.id_categoria
+group by nombre_categoria --agrupa por categoria
+having sum(v.precio_venta ) > 1000000; --y solo muestra categorias con ingresos mayores a 1mm
+
 
 
 --clientes escurridizos (usar left join para clientes sin ventas)
 select  
-c.id_clientes,
-c.email
+c.id_clientes,--  muestra el ID de los clientes que no tienen ventas
+c.email --  muestra el email de esos clientes 
 from clientes c 
 left join ventas v
-on c.id_clientes = v.id_cliente 
-WHERE COALESCE(v.id_cliente, 0) = 0;
+on c.id_clientes = v.id_cliente  -- relaciona clientes con ventas mediante el ID del cliente
+WHERE COALESCE(v.id_cliente, 0) = 0; -- muestra los que no tienen venta
 
 
 --top de compras por clientes
 select 
-c.email,
+c.email,	--queda con el mail del cliente
 p.nombre_producto,
-max (v.fecha_venta) as ultima_compra,
-count (*) as cantidad_compras
-from clientes c
-join ventas v
+max (v.fecha_venta) as ultima_compra --queda con la fecha d ela ultima compra
+
+from clientes c --de la tabla clientes
+join ventas v --que une con venta spor id de cliente
 on c.id_clientes = v.id_cliente
-join productos p
+join productos p --que une con productos por id del producto
 on v.id_producto = p.id_productos 
-group by 
+group by --agrupa por cliente
     c.id_clientes,
 c.email,
 p.nombre_producto 
 
 HAVING COUNT(*) = (
-    SELECT MAX(cantidad)
+    SELECT MAX(cantidad) -- obtiene la mayor cantidad de compras
     FROM (
-        SELECT COUNT(*) AS cantidad
+        SELECT COUNT(*) AS cantidad -- cuenta cuántas veces compró cada producto
         FROM ventas v2
-        WHERE v2.id_cliente = c.id_clientes
-        GROUP BY v2.id_producto
+        WHERE v2.id_cliente = c.id_clientes -- toma las ventas del cliente actual
+        GROUP BY v2.id_producto -- agrupa las ventas por producto
     ) AS compras
 );
+
+
+
+--calculos auxiliares.. no leer
+create table categorias (
+id_categoria serial primary key,
+nombre_categoria varchar(200) not null unique);
+
+SELECT DISTINCT categoria
+FROM productos;
+
+alter table categorias
+alter column nombre_categoria type varchar(200);
+
+insert into categorias (nombre_categoria)
+values
+('TV Y ACCESORIOS DE TV'),
+('articulos de computación');
+
+alter table ventas 
+ADD COLUMN precio_venta DECIMAL(10,2);
+
+UPDATE productos
+SET categoria = 2
+WHERE id_productos = 6;
+
+insert into ventas()
+
+
+ALTER TABLE productos
+ALTER COLUMN categoria TYPE INTEGER
+USING categoria::INTEGER;
